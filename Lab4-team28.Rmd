@@ -1,0 +1,35 @@
+---
+title: "Lab 3"
+author: "Team 28: Назар Пасічник, Анастасія Яблуновська, Марина Огінська"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: united
+---
+
+# Lab 3: Parameter estimation and Unbiasedness of Estimators
+
+## Work Breakdown Structure
+
+-   : Implementation of Problem 1 & 2
+-   Марина Огінська: Implementation of Problem 3
+-   : Implementation of Problem 4
+
+# Problem 1
+
+------------------------------------------------------------------------
+
+# Problem 2
+
+------------------------------------------------------------------------
+
+# Problem 3
+
+------------------------------------------------------------------------
+
+# Problem 4
+
+------------------------------------------------------------------------
+
+# Conclusions
