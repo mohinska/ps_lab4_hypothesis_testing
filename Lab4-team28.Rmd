@@ -12,9 +12,9 @@ output:
 
 ## Work Breakdown Structure
 
--   : Implementation of Problem 1 & 2
--   Марина Огінська: Implementation of Problem 3
--   : Implementation of Problem 4
+-   Назар Пасічник: Implementation of Problem 1 & 2
+-   Анастасія Яблуновська: Implementation of Problem 3
+-   Марина Огінська: Implementation of Problem 4
 
 # Problem 1
 
@@ -29,6 +29,118 @@ output:
 ------------------------------------------------------------------------
 
 # Problem 4
+
+```{r}
+data <- read.csv('data.csv', header=TRUE)
+data
+```
+
+```{r}
+plot(x = data$time_study,
+     y = data$Marks, 
+     main = "Marks vs Study Time",
+     xlab = "Study Time",
+     ylab = "Marks",
+     pch = 16,
+     col = "blue")
+
+model <- lm(Marks ~ time_study, data = data)
+
+summary(model)
+
+coefficients(model)
+
+abline(model, col = "red", lwd = 2)
+```
+
+### (a) Data Visualization and Initial Analysis
+
+There is a clear positive correlation between the two variables. The relationship appears to be strong, as the data points are clustered closely together. The pattern does not look perfectly linear. The data suggests exponential-like relationship.
+
+We assume the relationship can be approximated by the line $\hat{y}​=b_0​+b_1​x$. The difference between the actual value $y$ and the predicted value $\hat{y}$.
+
+### (b) Linear Regression Model and Derivation
+
+We fit a linear regression model using `Marks` as the dependent variable and `time_study` as the independent variable.
+
+To derive the regression equation, we use the **Ordinary Least Squares (OLS)** method.
+
+1.  **The Model:** We assume a linear relationship in the form: $$\hat{y} = b_0 + b_1 x$$ Where $b_1$ is the slope, and $b_0$ is the intercept.
+
+2.  **The Method:** We define the **residual** ($e_i$) as the difference between the observed value and the predicted value ($e_i = y_i - \hat{y}_i$). The OLS method finds the best-fitting line by **minimizing the Sum of Squared Errors (SSE)**: $$SSE = \sum_{i=1}^{n} (y_i - (b_0 + b_1 x_i))^2$$
+
+3.  **The Coefficients:** By using calculus to minimize the SSE, we derive the formulas for the coefficients:
+
+    -   **Slope (**$b_1$): $$b_1 = \frac{\sum (x_i - \bar{x})(y_i - \bar{y})}{\sum (x_i - \bar{x})^2}$$
+
+    -   **Intercept (**$b_0$): $$b_0 = \bar{y} - b_1 \bar{x}$$
+
+### (c) Goodness-of-Fit Evaluation
+
+To evaluate how well the linear model fits the data, we examine the **Coefficient of Determination (**$R^2$).
+
+```{r}
+model_summary <- summary(model)
+
+r_squared <- model_summary$r.squared
+print(paste("R-squared:", round(r_squared, 4)))
+```
+
+### (d) Statistical Significance Test
+
+To determine if Study Time is a significant predictor of Marks, perform a hypothesis test on the slope coefficient ($\beta_1$).
+
+**1. Hypotheses** Test if the slope is significantly different from zero: \* **Null Hypothesis (**$H_0$): $\beta_1 = 0$ (Study time has no effect on marks). \* **Alternative Hypothesis (**$H_1$): $\beta_1 \neq 0$ (Study time significantly affects marks).
+
+**2. Test Statistic and Distribution** The test statistic is calculated as: $$t = \frac{\hat{\beta}_1 - 0}{SE(\hat{\beta}_1)}$$ Under the null hypothesis, this statistic follows a **Student's t-distribution** with $n - 2$ degrees of freedom.
+
+**3. R Calculation and Conclusion**
+
+```{r}
+model_sum <- summary(model)
+
+coeffs <- model_sum$coefficients
+
+t_stat <- coeffs["time_study", "t value"]
+p_val <- coeffs["time_study", "Pr(>|t|)"]
+
+print(paste("T-statistic:", round(t_stat, 4)))
+print(paste("P-value:", format(p_val, scientific = TRUE)))
+
+alpha <- 0.05
+if(p_val < alpha) {
+  print("Conclusion: Reject Null Hypothesis. Study Time is significant.")
+} else {
+  print("Conclusion: Fail to reject Null Hypothesis.")
+}
+```
+
+### (e) Prediction for Alice
+
+If Alice studies for 8 hours, we can predict her mark using the fitted linear model. To predict Alice's grade, we substitute her study time into our regression equation:
+
+$$PredictedMark=b_0​+b_1​×8$$
+
+```{r}
+new_data <- data.frame(time_study = 8)
+predicted_grade <- predict(model, newdata = new_data)
+print(paste("Predicted grade for 8 hours of study:", round(predicted_grade, 2)))
+```
+
+### (f) Suggestions for Model Improvement
+
+Based on the analysis of the scatter plot and the model results, here are three ways to improve the model:
+
+1.  **Use Polynomial Regression:**
+    -   **Reason:** The scatter plot clearly shows a curved pattern, suggesting that the relationship is not strictly linear. The increase in marks accelerates as study time increases.
+    -   **Solution:** Instead of the simple equation $y = b_0 + b_1x$, we could fit a quadratic model: $y = b_0 + b_1x + b_2x^2$. This would likely increase the $R^2$.
+2.  **Add More Independent Variables:**
+    -   **Reason:** Study time is likely not the only factor affecting grades.
+    -   **Solution:** Collect more data features such as **attendance rate**, **previous GPA**, **hours of sleep**. Using Multiple Linear Regression to include these extra predictors would reduce the unexplained residuals.
+3.  **Apply Data Transformations:**
+    -   **Reason:** The variance of the data points seems to change slightly, or the relationship looks exponential.
+
+    -   **Solution:** We could apply a log-transformation to the dependent variable ($\log(Marks)$) or the independent variable. This often helps to linearize a curved relationship, making the standard linear regression model fit better.
 
 ------------------------------------------------------------------------
 
