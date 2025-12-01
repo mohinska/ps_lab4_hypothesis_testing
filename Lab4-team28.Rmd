@@ -8,12 +8,12 @@ output:
     theme: united
 ---
 
-# Lab 3: Parameter estimation and Unbiasedness of Estimators
+# Lab 4: Hypothesis testing
 
 ## Work Breakdown Structure
 
 -   : Implementation of Problem 1 & 2
--   Марина Огінська: Implementation of Problem 3
+-   Яблуновська Анастасія: Implementation of Problem 3
 -   : Implementation of Problem 4
 
 # Problem 1
@@ -26,6 +26,110 @@ output:
 
 # Problem 3
 
+```{r}
+id_number <- 28
+n <- id_number
+
+# Function to calculate a_k
+a_k <- function(k, n) {
+  frac_part <- (k * log(k^2 + n * pi)) %% 1
+  return(frac_part)
+}
+
+a_data <- sapply(1:150, a_k, n = n)
+
+x_vals <- qnorm(a_data[1:100])
+y_vals <- qnorm(a_data[101:150])
+
+```
+
+## (a) KS Test for Normality
+
+We test whether the sample $$
+{ x_k }_{k=1}^{100}
+$$ comes from a normal distribution with estimated parameters.
+Hypotheses $$
+H_0 : x_k \sim N(\hat{\mu}, \hat{\sigma}^2)
+$$ $$
+H_1 : x_k \not\sim N(\hat{\mu}, \hat{\sigma}^2)
+$$ KS Statistic $$
+D = \sup_x \left| F_n(x) - F(x) \right|
+$$
+
+```{r}
+mu_hat <- mean(x_vals)
+sigma_hat <- sd(x_vals)
+
+ks_test_normal <- ks.test(x_vals, "pnorm",
+                          mean = mu_hat, sd = sigma_hat)
+ks_test_normal
+
+if (ks_test_normal$p.value > 0.05) {
+  cat("p-value =", ks_test_normal$p.value, "> 0.05. Fail to reject H0. Data appears normal.\n")
+} else {
+  cat("p-value =", ks_test_normal$p.value, "< 0.05. Reject H0. Data not normal.\n")
+}
+
+```
+
+
+## (b) KS Test for Exponentiality of Absolute Values
+
+We consider the transformed data: $$
+{ |x_k| }_{k=1}^{100}
+$$ We test whether they follow: $$
+\text{Exp}(1)
+$$ Hypotheses $$
+H_0 : |x_k| \sim \text{Exp}(1)
+$$ $$
+H_1 : |x_k| \not\sim \text{Exp}(1)
+$$
+
+```{r}
+abs_x <- abs(x_vals)
+
+ks_test_exp <- ks.test(abs_x, "pexp", rate = 1)
+ks_test_exp
+if (ks_test_exp$p.value > 0.05) {
+  cat("p-value =", ks_test_exp$p.value, "> 0.05. Fail to reject H0. |X| ~ Exp(1).\n")
+} else {
+  cat("p-value =", ks_test_exp$p.value, "< 0.05. Reject H0. |X| not Exp(1).\n")
+}
+```
+
+
+## (c) Two-Sample KS Test for Equality of Distributions
+
+We compare the samples $$
+{ x_k }{k=1}^{100}
+\qquad\text{and}\qquad
+{ y\ell }_{\ell=1}^{50}
+$$ Hypotheses $$
+H_0 : F_X(x) = F_Y(x)\ \text{for all } x
+$$ $$
+H_1 : F_X(x) \neq F_Y(x)\ \text{for some } x
+$$ KS Statistic $$
+D = \sup_x \left| F_{X,n}(x) - F_{Y,m}(x) \right|
+$$
+
+```{r}
+ks_test_two <- ks.test(x_vals, y_vals)
+ks_test_two
+if (ks_test_two$p.value > 0.05) {
+  cat("p-value =", ks_test_two$p.value, "> 0.05. Fail to reject H0. Same distribution.\n")
+} else {
+  cat("p-value =", ks_test_two$p.value, "< 0.05. Reject H0. Different distributions.\n")
+}
+```
+
+## Main Idea of KS Test
+
+The Kolmogorov-Smirnov test compares the empirical cumulative
+distribution function (ECDF) of sample data with a theoretical CDF. It
+measures the maximum vertical distance D between them. If D exceeds a
+critical value (or p-value \< α), we reject the hypothesis that data
+follows the theoretical distribution.
+
 ------------------------------------------------------------------------
 
 # Problem 4
@@ -33,3 +137,21 @@ output:
 ------------------------------------------------------------------------
 
 # Conclusions
+
+## Problem 3
+
+In this problem, we applied the Kolmogorov–Smirnov test to three
+different hypotheses regarding the distributions of the generated
+samples. First, we tested whether $$ {x_k}{k=1}^{100} $$ follows a
+normal distribution with parameters estimated from the sample. Second,
+we checked whether the transformed data $$ {|x_k|}{k=1}^{100} $$ is
+exponentially distributed with rate $$ \lambda = 1. $$ Finally, we
+compared the two samples
+$$ {x_k}{k=1}^{100} \quad \text{and} \quad {y\ell}_{\ell=1}^{50} $$ to
+determine whether they originate from the same distribution. Across all
+three tests, the conclusions were based on comparing the p-value with
+the significance level $$ \alpha = 0.05. $$ If the p-value exceeded this
+threshold, we did not reject the null hypothesis; otherwise, we rejected
+it. The KS test therefore allowed us to evaluate normality,
+exponentiality, and the equivalence of distributions without assuming
+any specific parametric form beyond the tested models.
