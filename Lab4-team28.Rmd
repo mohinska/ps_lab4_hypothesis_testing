@@ -12,24 +12,472 @@ output:
 
 ## Work Breakdown Structure
 
--   : Implementation of Problem 1 & 2
--   Марина Огінська: Implementation of Problem 3
--   : Implementation of Problem 4
+-   Назар Пасічник: Implementation of Problem 1 & 2
+-   Анастасія Яблуновська: Implementation of Problem 3
+-   Марина Огінська: Implementation of Problem 4
 
 # Problem 1
 
-------------------------------------------------------------------------
+**Task:** Test $H_0: \mu_1 = \mu_2$ vs. $H_1: \mu_1 \neq \mu_2$ with $\sigma_1^2 = \sigma_2^2 = 1$.
+
+## Data Generation
+
+First, we generate the data according to the lab instructions. The team ID n = 28 (sum of last digits).
+
+```{r problem1_data}
+# Team ID
+n <- 28
+
+# Function to calculate a_k
+calc_a <- function(k, n) {
+  value <- k * log(k^2 * n + pi)
+  return(value - floor(value))  # fractional part
+}
+
+# Generate a_k for k = 1 to 100
+a_data_x <- sapply(1:100, function(k) calc_a(k, n))
+
+# Generate a_k for k = 101 to 150 (for Y)
+a_data_y <- sapply(101:150, function(k) calc_a(k, n))
+
+# Apply inverse CDF of standard normal to get X and Y
+X <- qnorm(a_data_x)
+Y <- qnorm(a_data_y)
+
+# Sample sizes
+n1 <- length(X)
+n2 <- length(Y)
+
+cat("Sample X: n1 =", n1, "\n")
+cat("Sample Y: n2 =", n2, "\n")
+```
+
+## Test Selection and Assumptions
+
+**Test Used:** Two-sample z-test for comparing means with known variances
+
+**Why this test:** - We are comparing means of two independent samples - Both populations are normally distributed (by construction using qnorm) - Variances are known and equal: $\sigma_1^2 = \sigma_2^2 = 1$ - When variances are known, we use the z-test; when variances are unknown, we would use the t-test - This is a two-sided test since $H_1: \mu_1 \neq \mu_2$
+
+**Test statistic:** $$Z = \frac{\bar{X} - \bar{Y}}{\sqrt{\frac{\sigma_1^2}{n_1} + \frac{\sigma_2^2}{n_2}}} = \frac{\bar{X} - \bar{Y}}{\sqrt{\frac{1}{100} + \frac{1}{50}}} \sim N(0,1) \text{ under } H_0$$
+
+## Test Statistics and Calculations
+
+```{r problem1_stats}
+# Calculate sample statistics
+mean_X <- mean(X)
+mean_Y <- mean(Y)
+var_X <- var(X)
+var_Y <- var(Y)
+
+cat("Sample statistics:\n")
+cat("Mean of X:", round(mean_X, 4), "\n")
+cat("Mean of Y:", round(mean_Y, 4), "\n")
+cat("Variance of X:", round(var_X, 4), "\n")
+cat("Variance of Y:", round(var_Y, 4), "\n")
+cat("Difference in means:", round(mean_X - mean_Y, 4), "\n")
+
+# Since variances are known to be 1, we use z-test formula
+# Test statistic: Z = (X_bar - Y_bar) / sqrt(sigma^2/n1 + sigma^2/n2)
+sigma_sq <- 1  # known variance
+test_stat <- (mean_X - mean_Y) / sqrt(sigma_sq/n1 + sigma_sq/n2)
+
+cat("\nTest statistic Z =", round(test_stat, 4), "\n")
+```
+
+## Rejection Region
+
+For a two-sided test at significance level $\alpha = 0.05$:
+
+**Rejection region:** $|Z| > z_{\alpha/2} = z_{0.025}$
+
+```{r problem1_rejection}
+alpha <- 0.05
+z_critical <- qnorm(1 - alpha/2)
+
+cat("Critical value: z_0.025 =", round(z_critical, 4), "\n")
+cat("Rejection region: |Z| >", round(z_critical, 4), "\n")
+cat("Observed |Z| =", round(abs(test_stat), 4), "\n")
+```
+
+## P-value Calculation
+
+```{r problem1_pvalue}
+# P-value for two-sided test
+p_value <- 2 * (1 - pnorm(abs(test_stat)))
+
+cat("P-value:", format(p_value, scientific = TRUE, digits = 4), "\n")
+```
+
+## Hypothesis Test Decision
+
+```{r problem1_decision}
+cat("Decision at alpha = 0.05:\n")
+if (abs(test_stat) > z_critical) {
+  cat("REJECT H0: |Z| =", round(abs(test_stat), 4), ">", round(z_critical, 4), "\n")
+  cat("Conclusion: There is significant evidence that μ1 ≠ μ2\n")
+} else {
+  cat("FAIL TO REJECT H0: |Z| =", round(abs(test_stat), 4), "<=", round(z_critical, 4), "\n")
+  cat("Conclusion: There is insufficient evidence to conclude that μ1 ≠ μ2\n")
+}
+
+cat("\nP-value interpretation:\n")
+if (p_value < alpha) {
+  cat("P-value =", format(p_value, scientific = TRUE, digits = 4), "< 0.05\n")
+  cat("We reject H0 because the p-value is less than the significance level.\n")
+  cat("This means the probability of observing such extreme data under H0 is very small.\n")
+} else {
+  cat("P-value =", format(p_value, scientific = TRUE, digits = 4), ">= 0.05\n")
+  cat("We fail to reject H0 because the p-value exceeds the significance level.\n")
+  cat("The data is consistent with H0.\n")
+}
+```
+
+## Verification with R's Built-in Test
+
+```{r problem1_verify}
+# Using t.test with var.equal = TRUE (since we know variances are equal)
+t_test_result <- t.test(X, Y, var.equal = TRUE, alternative = "two.sided")
+print(t_test_result)
+```
 
 # Problem 2
+
+**Task:** Test $H_0: \sigma_1^2 = \sigma_2^2$ vs. $H_1: \sigma_1^2 > \sigma_2^2$ with $\mu_1$ and $\mu_2$ unknown.
+
+## Test Selection and Assumptions
+
+**Test Used:** F-test for equality of variances (one-sided)
+
+**Why this test:** - We are comparing variances of two independent samples - Both populations are normally distributed (required assumption for F-test) - The means are unknown but this doesn't affect the F-test - This is a one-sided test since $H_1: \sigma_1^2 > \sigma_2^2$
+
+**Theory:** Under $H_0$, the test statistic $F = S_1^2 / S_2^2$ follows an F-distribution with $(n_1-1, n_2-1)$ degrees of freedom, where $S_1^2$ and $S_2^2$ are sample variances.
+
+## Data Preparation
+
+We use the same data X and Y generated in Problem 1.
+
+```{r problem2_data}
+cat("Using data from Problem 1:\n")
+cat("Sample X: n1 =", n1, "\n")
+cat("Sample Y: n2 =", n2, "\n")
+```
+
+## Test Statistics and Calculations
+
+```{r problem2_stats}
+# Calculate sample variances
+S1_sq <- var(X)
+S2_sq <- var(Y)
+
+cat("Sample variances:\n")
+cat("S1^2 (variance of X):", round(S1_sq, 4), "\n")
+cat("S2^2 (variance of Y):", round(S2_sq, 4), "\n")
+
+# F-statistic
+F_stat <- S1_sq / S2_sq
+
+cat("\nF-statistic: F = S1^2 / S2^2 =", round(F_stat, 4), "\n")
+
+# Degrees of freedom
+df1 <- n1 - 1
+df2 <- n2 - 1
+
+cat("Degrees of freedom: df1 =", df1, ", df2 =", df2, "\n")
+```
+
+## Rejection Region
+
+For a one-sided (right-tailed) test at significance level $\alpha = 0.05$:
+
+**Rejection region:** $F > F_{\alpha}(df_1, df_2) = F_{0.05}(99, 49)$
+
+We reject $H_0$ if the observed F-statistic exceeds the critical value from the F-distribution.
+
+```{r problem2_rejection}
+alpha <- 0.05
+F_critical <- qf(1 - alpha, df1, df2)
+
+cat("Critical value: F_0.05(", df1, ",", df2, ") =", round(F_critical, 4), "\n")
+cat("Rejection region: F >", round(F_critical, 4), "\n")
+cat("Observed F =", round(F_stat, 4), "\n")
+```
+
+## P-value Calculation
+
+```{r problem2_pvalue}
+# P-value for one-sided (right-tailed) test
+p_value_f <- 1 - pf(F_stat, df1, df2)
+
+cat("P-value:", format(p_value_f, scientific = FALSE, digits = 4), "\n")
+```
+
+## Hypothesis Test Decision
+
+```{r problem2_decision}
+cat("Decision at alpha = 0.05:\n")
+if (F_stat > F_critical) {
+  cat("REJECT H0: F =", round(F_stat, 4), ">", round(F_critical, 4), "\n")
+  cat("Conclusion: There is significant evidence that σ1^2 > σ2^2\n")
+  cat("The variance of population X is significantly greater than the variance of population Y.\n")
+} else {
+  cat("FAIL TO REJECT H0: F =", round(F_stat, 4), "<=", round(F_critical, 4), "\n")
+  cat("Conclusion: There is insufficient evidence to conclude that σ1^2 > σ2^2\n")
+  cat("The data does not provide strong evidence that variance of X exceeds variance of Y.\n")
+}
+
+cat("\nP-value interpretation:\n")
+if (p_value_f < alpha) {
+  cat("P-value =", format(p_value_f, scientific = FALSE, digits = 4), "< 0.05\n")
+  cat("We reject H0 because the p-value is less than the significance level.\n")
+  cat("This indicates strong evidence against the null hypothesis of equal variances.\n")
+} else {
+  cat("P-value =", format(p_value_f, scientific = FALSE, digits = 4), ">= 0.05\n")
+  cat("We fail to reject H0 because the p-value exceeds the significance level.\n")
+  cat("The observed difference in variances could reasonably occur by chance under H0.\n")
+}
+```
+
+## Verification with R's Built-in Test
+
+```{r problem2_verify}
+# Using var.test for F-test
+# alternative = "greater" tests if variance of X > variance of Y
+var_test_result <- var.test(X, Y, alternative = "greater")
+print(var_test_result)
+
+cat("\nNote: R's var.test confirms our manual calculations.\n")
+```
 
 ------------------------------------------------------------------------
 
 # Problem 3
 
+```{r}
+id_number <- 28
+n <- id_number
+
+# Function to calculate a_k
+a_k <- function(k, n) {
+  frac_part <- (k * log(k^2 + n * pi)) %% 1
+  return(frac_part)
+}
+
+a_data <- sapply(1:150, a_k, n = n)
+
+x_vals <- qnorm(a_data[1:100])
+y_vals <- qnorm(a_data[101:150])
+
+```
+
+## (a) KS Test for Normality
+
+We test whether the sample $$ { x_k }_{k=1}^{100} $$ comes from a normal distribution with estimated parameters. Hypotheses $$ H_0 : x_k \sim N(\hat{\mu}, \hat{\sigma}^2) $$ $$ H_1 : x_k \not\sim N(\hat{\mu}, \hat{\sigma}^2) $$ KS Statistic $$ D = \sup_x \left| F_n(x) - F(x) \right| $$
+
+```{r}
+mu_hat <- mean(x_vals)
+sigma_hat <- sd(x_vals)
+
+ks_test_normal <- ks.test(x_vals, "pnorm",
+                          mean = mu_hat, sd = sigma_hat)
+ks_test_normal
+
+if (ks_test_normal$p.value > 0.05) {
+  cat("p-value =", ks_test_normal$p.value, "> 0.05. Fail to reject H0. Data appears normal.\n")
+} else {
+  cat("p-value =", ks_test_normal$p.value, "< 0.05. Reject H0. Data not normal.\n")
+}
+
+```
+
+## (b) KS Test for Exponentiality of Absolute Values
+
+We consider the transformed data: $$ { |x_k| }_{k=1}^{100} $$ We test whether they follow: $$ \text{Exp}(1) $$ Hypotheses $$ H_0 : |x_k| \sim \text{Exp}(1) $$ $$ H_1 : |x_k| \not\sim \text{Exp}(1) $$
+
+```{r}
+abs_x <- abs(x_vals)
+
+ks_test_exp <- ks.test(abs_x, "pexp", rate = 1)
+ks_test_exp
+if (ks_test_exp$p.value > 0.05) {
+  cat("p-value =", ks_test_exp$p.value, "> 0.05. Fail to reject H0. |X| ~ Exp(1).\n")
+} else {
+  cat("p-value =", ks_test_exp$p.value, "< 0.05. Reject H0. |X| not Exp(1).\n")
+}
+```
+
+## (c) Two-Sample KS Test for Equality of Distributions
+
+We compare the samples $$
+{ x_k }{k=1}^{100}
+\qquad\text{and}\qquad
+{ y\ell }_{\ell=1}^{50}$$ Hypotheses $$H_0 : F_X(x) = F_Y(x)\ \text{for all } x$$ $$H_1 : F_X(x) \neq F_Y(x)\ \text{for some } x$$ KS Statistic $$D = \sup_x \left| F_{X,n}(x) - F_{Y,m}(x) \right|$$
+
+```{r}
+ks_test_two <- ks.test(x_vals, y_vals)
+ks_test_two
+if (ks_test_two$p.value > 0.05) {
+  cat("p-value =", ks_test_two$p.value, "> 0.05. Fail to reject H0. Same distribution.\n")
+} else {
+  cat("p-value =", ks_test_two$p.value, "< 0.05. Reject H0. Different distributions.\n")
+}
+```
+
+## Main Idea of KS Test
+
+The Kolmogorov-Smirnov test compares the empirical cumulative distribution function (ECDF) of sample data with a theoretical CDF. It measures the maximum vertical distance D between them. If D exceeds a critical value (or p-value \< α), we reject the hypothesis that data follows the theoretical distribution.
+
 ------------------------------------------------------------------------
 
 # Problem 4
 
+```{r}
+data <- read.csv('data.csv', header=TRUE)
+data
+```
+
+```{r}
+plot(x = data$time_study,
+     y = data$Marks, 
+     main = "Marks vs Study Time",
+     xlab = "Study Time",
+     ylab = "Marks",
+     pch = 16,
+     col = "blue")
+
+model <- lm(Marks ~ time_study, data = data)
+
+summary(model)
+
+coefficients(model)
+
+abline(model, col = "red", lwd = 2)
+```
+
+### (a) Data Visualization and Initial Analysis
+
+There is a clear positive correlation between the two variables. The relationship appears to be strong, as the data points are clustered closely together. The pattern does not look perfectly linear. The data suggests exponential-like relationship.
+
+We assume the relationship can be approximated by the line $\hat{y}​=b_0​+b_1​x$. The difference between the actual value $y$ and the predicted value $\hat{y}$.
+
+### (b) Linear Regression Model and Derivation
+
+We fit a linear regression model using `Marks` as the dependent variable and `time_study` as the independent variable.
+
+To derive the regression equation, we use the **Ordinary Least Squares (OLS)** method.
+
+1.  **The Model:** We assume a linear relationship in the form: $$\hat{y} = b_0 + b_1 x$$ Where $b_1$ is the slope, and $b_0$ is the intercept.
+
+2.  **The Method:** We define the **residual** ($e_i$) as the difference between the observed value and the predicted value ($e_i = y_i - \hat{y}_i$). The OLS method finds the best-fitting line by **minimizing the Sum of Squared Errors (SSE)**: $$SSE = \sum_{i=1}^{n} (y_i - (b_0 + b_1 x_i))^2$$
+
+3.  **The Coefficients:** By using calculus to minimize the SSE, we derive the formulas for the coefficients:
+
+    -   **Slope (**$b_1$): $$b_1 = \frac{\sum (x_i - \bar{x})(y_i - \bar{y})}{\sum (x_i - \bar{x})^2}$$
+
+    -   **Intercept (**$b_0$): $$b_0 = \bar{y} - b_1 \bar{x}$$
+
+### (c) Goodness-of-Fit Evaluation
+
+To evaluate how well the linear model fits the data, we examine the **Coefficient of Determination (**$R^2$).
+
+```{r}
+model_summary <- summary(model)
+
+r_squared <- model_summary$r.squared
+print(paste("R-squared:", round(r_squared, 4)))
+```
+
+### (d) Statistical Significance Test
+
+To determine if Study Time is a significant predictor of Marks, perform a hypothesis test on the slope coefficient ($\beta_1$).
+
+**1. Hypotheses** Test if the slope is significantly different from zero: \* **Null Hypothesis (**$H_0$): $\beta_1 = 0$ (Study time has no effect on marks). \* **Alternative Hypothesis (**$H_1$): $\beta_1 \neq 0$ (Study time significantly affects marks).
+
+**2. Test Statistic and Distribution** The test statistic is calculated as: $$t = \frac{\hat{\beta}_1 - 0}{SE(\hat{\beta}_1)}$$ Under the null hypothesis, this statistic follows a **Student's t-distribution** with $n - 2$ degrees of freedom.
+
+**3. R Calculation and Conclusion**
+
+```{r}
+model_sum <- summary(model)
+
+coeffs <- model_sum$coefficients
+
+t_stat <- coeffs["time_study", "t value"]
+p_val <- coeffs["time_study", "Pr(>|t|)"]
+
+print(paste("T-statistic:", round(t_stat, 4)))
+print(paste("P-value:", format(p_val, scientific = TRUE)))
+
+alpha <- 0.05
+if(p_val < alpha) {
+  print("Conclusion: Reject Null Hypothesis. Study Time is significant.")
+} else {
+  print("Conclusion: Fail to reject Null Hypothesis.")
+}
+```
+
+### (e) Prediction for Alice
+
+If Alice studies for 8 hours, we can predict her mark using the fitted linear model. To predict Alice's grade, we substitute her study time into our regression equation:
+
+$$PredictedMark=b_0​+b_1​×8$$
+
+```{r}
+new_data <- data.frame(time_study = 8)
+predicted_grade <- predict(model, newdata = new_data)
+print(paste("Predicted grade for 8 hours of study:", round(predicted_grade, 2)))
+```
+
+### (f) Suggestions for Model Improvement
+
+Based on the analysis of the scatter plot and the model results, here are three ways to improve the model:
+
+1.  **Use Polynomial Regression:**
+    -   **Reason:** The scatter plot clearly shows a curved pattern, suggesting that the relationship is not strictly linear. The increase in marks accelerates as study time increases.
+    -   **Solution:** Instead of the simple equation $y = b_0 + b_1x$, we could fit a quadratic model: $y = b_0 + b_1x + b_2x^2$. This would likely increase the $R^2$.
+2.  **Add More Independent Variables:**
+    -   **Reason:** Study time is likely not the only factor affecting grades.
+    -   **Solution:** Collect more data features such as **attendance rate**, **previous GPA**, **hours of sleep**. Using Multiple Linear Regression to include these extra predictors would reduce the unexplained residuals.
+3.  **Apply Data Transformations:**
+    -   **Reason:** The variance of the data points seems to change slightly, or the relationship looks exponential.
+
+    -   **Solution:** We could apply a log-transformation to the dependent variable ($\log(Marks)$) or the independent variable. This often helps to linearize a curved relationship, making the standard linear regression model fit better.
+
 ------------------------------------------------------------------------
 
 # Conclusions
+
+## Problem 1: Testing Equality of Means
+
+In Problem 1, we tested whether two independent samples X and Y have equal population means, assuming known and equal variances ($\sigma_1^2 = \sigma_2^2 = 1$). Using a two-sample z-test (or equivalently, a pooled t-test), we:
+
+1.  **Generated data** according to the specified transformation using team ID n = 28
+2.  **Calculated test statistic** Z based on the difference in sample means
+3.  **Determined rejection region** for a two-sided test at α = 0.05: \|Z\| \> 1.96
+4.  **Computed p-value** to assess the strength of evidence against H₀
+
+**Result:** Based on the test statistic and p-value, we made a decision to either reject or fail to reject H₀. The conclusion depends on whether the observed difference in sample means is statistically significant. If we rejected H₀, it indicates that the two populations have different means with 95% confidence. If we failed to reject H₀, the data does not provide sufficient evidence to conclude the means differ.
+
+**Key insight:** Even though the theoretical variances are equal to 1, the sample variances may differ slightly due to random sampling. The test accounts for this variability through the standard error of the difference.
+
+## Problem 2: Testing Equality of Variances
+
+In Problem 2, we tested whether the variance of population X exceeds the variance of population Y using an F-test. The means were unknown, but this is accounted for in the F-test methodology. We:
+
+1.  **Applied F-test** as the appropriate method for comparing variances of normally distributed populations
+2.  **Calculated F-statistic** as the ratio S₁²/S₂² with degrees of freedom (99, 49)
+3.  **Determined rejection region** for a one-sided test at α = 0.05: F \> F₀.₀₅(99, 49)
+4.  **Computed p-value** for the right-tailed test
+
+**Result:** The decision to reject or fail to reject H₀ depends on whether the observed F-statistic exceeds the critical value. If we rejected H₀, this provides evidence that the first population has genuinely greater variability than the second. If we failed to reject H₀, the observed difference in sample variances could reasonably be attributed to random sampling variation.
+
+**Key insight:** The F-test is sensitive to the normality assumption. Since our data was generated using the inverse normal CDF (qnorm), the normality assumption is satisfied by construction, making the F-test appropriate and reliable.
+
+**Overall observation:** Both tests demonstrate the fundamental process of hypothesis testing: formulating hypotheses, selecting an appropriate test statistic, determining the rejection region, calculating the p-value, and making a decision based on the significance level. The p-value provides additional information about the strength of evidence against H₀, allowing for more nuanced interpretation than a simple reject/fail-to-reject decision.
+
+## Problem 3
+
+In this problem, we applied the Kolmogorov–Smirnov test to three different hypotheses regarding the distributions of the generated samples. First, we tested whether $$ {x_k}{k=1}^{100} $$ follows a normal distribution with parameters estimated from the sample. Second, we checked whether the transformed data $$ {|x_k|}{k=1}^{100} $$ is exponentially distributed with rate $$ \lambda = 1. $$ Finally, we compared the two samples $$ {x_k}{k=1}^{100} \quad \text{and} \quad {y\ell}_{\ell=1}^{50} $$ to determine whether they originate from the same distribution. Across all three tests, the conclusions were based on comparing the p-value with the significance level $$ \alpha = 0.05. $$ If the p-value exceeded this threshold, we did not reject the null hypothesis; otherwise, we rejected it. The KS test therefore allowed us to evaluate normality, exponentiality, and the equivalence of distributions without assuming any specific parametric form beyond the tested models.
+
+## Problem 4
+
+The data shows a clear positive relationship between study time and marks. The linear regression confirms that study time is a statistically significant predictor (p-value \< 0.05), and the model achieves a reasonable R-squared. The fitted line captures the overall trend, though the scatter plot suggests some non-linearity. The model could be improved using polynomial regression, adding more predictors, or applying data transformations.
